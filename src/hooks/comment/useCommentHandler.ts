@@ -15,18 +15,12 @@ const useCommentHandler = (commentId: string, postId: string, groupId: string, p
       await queryClient.cancelQueries({ queryKey: ['comments', postId] });
 
       const previousComments = queryClient.getQueryData(['comments', postId]);
+      const previousPosts = queryClient.getQueryData(['posts', groupId, '']);
 
       queryClient.setQueryData(['comments', postId], (old: CommentsType[]) =>
         old?.filter((comment) => comment.id !== commentId)
       );
-
-      return { previousComments };
-    },
-    onError: (_err, _variables, context) => {
-      queryClient.setQueryData(['comments', postId], context?.previousComments);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      
       queryClient.setQueryData<InfiniteData<PostCacheListType[]>>(['posts', groupId, ''], (oldData) => {
         if (!oldData) {
           return oldData;
@@ -45,6 +39,15 @@ const useCommentHandler = (commentId: string, postId: string, groupId: string, p
           pages: newData,
         };
       });
+
+      return { previousComments, previousPosts };
+    },
+    onError: (_err, _variables, context) => {
+      queryClient.setQueryData(['comments', postId], context?.previousComments);
+      queryClient.setQueryData(['posts', groupId, ''], context?.previousPosts);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
     },
   });
 
